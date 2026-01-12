@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MOST WANTED SMP | Dynamic Sync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --accent: #a2d2ff; 
+            --bg: #0d0d0d; 
+            --card: #181818; 
+            --success: #8ce99a; 
+            --danger: #ff8787;
+            --theme-color: #a2d2ff; /* Dynamic color */
+        }
+        
+        body { 
+            background: var(--bg); 
+            color: white; 
+            font-family: 'Quicksand', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            transition: background 0.5s ease;
+        }
+        
+        .container { 
+            background: var(--card); 
+            padding: 40px; 
+            border-radius: 30px; 
+            width: 400px; 
+            text-align: center; 
+            border: 3px solid var(--theme-color); 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5), 0 0 15px var(--theme-color);
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        h1 { font-family: 'Fredoka', sans-serif; color: var(--theme-color); margin: 0; transition: color 0.5s; }
+        .tagline { color: #555; font-size: 0.7rem; letter-spacing: 3px; margin-bottom: 20px; }
+
+        input, select { 
+            width: 100%; padding: 12px; margin: 10px 0; background: #222; 
+            border: 1px solid #333; border-radius: 12px; color: white; font-family: inherit;
+        }
+
+        .btn-submit { 
+            width: 100%; padding: 15px; background: var(--theme-color); color: #000; 
+            border: none; border-radius: 12px; font-weight: bold; cursor: pointer; 
+            margin-top: 10px; transition: 0.3s;
+        }
+
+        /* Admin/Dev Link */
+        .dev-link { margin-top: 25px; font-size: 0.75rem; color: #333; cursor: pointer; display: block; }
+
+        /* Admin Overlay */
+        #adminPanel { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; padding: 20px; overflow-y: auto; }
+        .admin-box { max-width: 500px; margin: 40px auto; background: #111; padding: 30px; border-radius: 25px; border: 2px solid var(--accent); }
+        .entry { background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <audio id="notifSound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="container" id="mainCard">
+        <h1 id="title">MOST WANTED</h1>
+        <div class="tagline">Dynamic Theme Active</div>
+        
+        <form id="applyForm">
+            <input type="text" id="name" placeholder="Full Name" required>
+            <input type="text" id="gtag" placeholder="Minecraft Gamertag" required>
+            <select id="post" onchange="updateTheme(this.value)" required>
+                <option value="" disabled selected>Choose Rank</option>
+                <option value="President">President 👑</option>
+                <option value="Vice President">Vice President 🥈</option>
+                <option value="Bank Manager">Bank Manager 💰</option>
+                <option value="Minister of Defence">Minister of Defence 🛡️</option>
+                <option value="Police">Police 👮</option>
+                <option value="Builder">Builder 🔨</option>
+                <option value="Miner">Miner ⛏️</option>
+                <option value="Junior Miner">Junior Miner 🌱</option>
+                <option value="Normal Player">Citizen 🎮</option>
+            </select>
+            <button type="submit" class="btn-submit" id="submitBtn">Submit Application ✨</button>
+        </form>
+
+        <span class="dev-link" onclick="openAdmin()">Developer Dashboard</span>
+    </div>
+
+    <div id="adminPanel">
+        <div class="admin-box">
+            <h2 style="color:var(--accent)">Admin PC Sync</h2>
+            <button onclick="linkToPC()" style="background:var(--accent); padding:10px; border-radius:10px; cursor:pointer;">📁 Link Save File on PC</button>
+            <button onclick="document.getElementById('adminPanel').style.display='none'" style="margin-left:10px;">Close</button>
+            <div id="listDisplay" style="margin-top:20px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let pcFileHandle = null;
+        const DEV_KEY = "admin";
+
+        // --- NEW: Dynamic Theme Logic ---
+        function updateTheme(role) {
+            const colors = {
+                "President": "#ffd700",       // Gold
+                "Vice President": "#c0c0c0",  // Silver
+                "Bank Manager": "#85bb65",    // Money Green
+                "Minister of Defence": "#ff4d4d", // Red
+                "Police": "#3399ff",          // Blue
+                "Builder": "#ff9933",         // Orange
+                "Miner": "#55ff55",           // Lime
+                "Junior Miner": "#98ffcc",    // Mint
+                "Normal Player": "#a2d2ff"    // Sky Blue
+            };
+            const color = colors[role] || "#a2d2ff";
+            document.documentElement.style.setProperty('--theme-color', color);
+            document.body.style.background = `radial-gradient(circle at center, ${color}22 0%, #0d0d0d 100%)`;
+        }
+
+        // --- Standard Logic ---
+        document.getElementById('applyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            document.getElementById('notifSound').play();
+
+            const app = {
+                id: Date.now(),
+                name: document.getElementById('name').value,
+                gtag: document.getElementById('gtag').value,
+                post: document.getElementById('post').value,
+                status: 'Pending'
+            };
+
+            let data = JSON.parse(localStorage.getItem('smp_records') || '[]');
+            data.push(app);
+            localStorage.setItem('smp_records', JSON.stringify(data));
+            
+            if(pcFileHandle) await syncWithPC();
+            alert("Application Submitted! Check your PC file.");
+            e.target.reset();
+            updateTheme(""); // Reset color
+        });
+
+        function openAdmin() {
+            if(prompt("Developer Password:") === DEV_KEY) {
+                document.getElementById('adminPanel').style.display = 'block';
+                refreshUI();
+            }
+        }
+
+        async function linkToPC() {
+            try {
+                pcFileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'MOST_WANTED_LIST.csv',
+                    types: [{ description: 'CSV File', accept: {'text/csv': ['.csv']} }],
+                });
+                await syncWithPC();
+                alert("PC Sync Connected!");
+            } catch (err) {}
+        }
+
+        async function syncWithPC() {
+            if (!pcFileHandle) return;
+            const records = JSON.parse(localStorage.getItem('smp_records') || '[]');
+            let csv = "Status,Gamertag,Role,Real Name\n";
+            records.forEach(r => csv += `${r.status},${r.gtag},${r.post},${r.name}\n`);
+            const writable = await pcFileHandle.createWritable();
+            await writable.write(csv);
+            await writable.close();
+        }
+
+        function refreshUI() {
+            const list = document.getElementById('listDisplay');
+            const records = JSON.parse(localStorage.getItem('smp_records') || '[]');
+            list.innerHTML = records.map(r => `
+                <div class="entry">
+                    <span><b>${r.gtag}</b><br><small>${r.post}</small></span>
+                    <button onclick="setStat(${r.id}, 'Accepted')">✔</button>
+                </div>
+            `).join('');
+        }
+
+        async function setStat(id, s) {
+            let data = JSON.parse(localStorage.getItem('smp_records') || '[]');
+            data = data.map(i => i.id === id ? {...i, status: s} : i);
+            localStorage.setItem('smp_records', JSON.stringify(data));
+            if(pcFileHandle) await syncWithPC();
+            refreshUI();
+        }
+    </script>
+</body>
+</html>
